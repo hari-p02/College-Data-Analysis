@@ -1,0 +1,7 @@
+"0","vioplot(CT$average_student_debt, ME$average_student_debt, MA$average_student_debt, "
+"0","        NH$average_student_debt, RI$average_student_debt, VT$average_student_debt,"
+"0","        names = c(""CT"", ""ME"", ""MA"", ""NH"", ""RI"", ""VT""),"
+"0","        col=""orange"","
+"0","        main = ""Violinplot of Average Student Debt"","
+"0","        xlab =""State"","
+"0","        ylab = ""Avg. Debt"")"

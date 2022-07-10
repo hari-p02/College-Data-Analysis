@@ -1,0 +1,4 @@
+"0","# Some global options you might use if you like"
+"0","knitr::opts_chunk$set(comment = NA) # if you want to remove hashes from all output"
+"0","knitr::opts_chunk$set(out.width=""80%"") # if you want to resize the output figure"
+"0","options(width = 80) # to set the max. number of characters to 80"

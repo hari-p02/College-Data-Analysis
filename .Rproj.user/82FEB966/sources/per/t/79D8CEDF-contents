@@ -1,0 +1,184 @@
+---
+title: "STAT 3675Q Homework 7"
+subtitle: "Due date: **Friday, April 29, 2022, 11:59pm**"
+author: "YOUR NAME"
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comment = NA, warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(out.width="80%") 
+options(width = 80)
+```
+
+## General Instructions
+
+* Use the template posted on HuskyCT for homework submission. Save the compiled PDF file under the file name **LastName-FirstName-HW7.pdf** and submit it through HuskyCT by the deadline. **Late submission will not be accepted.**
+
+* Answer the questions by inserting R code and necessary comments. Your output must contain the R code (do not use the `echo=FALSE` option). 
+
+* For long comments, please write them outside the code chunks. 
+
+* **Please be reminded that the project will be due at the same time.** (So, get started as early as you can! Note that this homework covers on Lecture 12.) 
+
+## Max Points: 65
+
+This problem relates to the College data set in the **ISLR** package. It contains a number of variables for 777 different universities and colleges in the US. The variables are
+
+- **Private** : Public/private indicator
+- **Apps** : Number of applications received
+- **Accept** : Number of applicants accepted
+- **Enroll** : Number of new students enrolled
+- **Top10perc** : New students from top 10% of high school class
+- **Top25perc** : New students from top 25% of high school class
+- **F.Undergrad** : Number of full-time undergraduates
+- **P.Undergrad** : Number of part-time undergraduates
+- **Outstate** : Out-of-state tuition
+- **Room.Board** : Room and board costs
+- **Books** : Estimated book costs
+- **Personal** : Estimated personal spending
+- **PhD** : Percent of faculty with Ph.D.'s
+- **Terminal** : Percent of faculty with terminal degree
+- **S.F.Ratio** : Student/faculty ratio
+- **perc.alumni** : Percent of alumni who donate
+- **Expend** : Instructional expenditure per student
+- **Grad.Rate** : Graduation rate
+
+In this problem, you will predict if an institution is private or public using the other variables.
+
+a. [6] Load the `ISLR` package. Split the data into a training set and a validation set. The training set contains 80% of the data points, and the validation set contains the remaining observations.
+
+```{r}
+library(ISLR)
+data(College)
+train <- sample(nrow(College), 0.8*nrow(College))
+College.train <- College[train,]
+College.validate <- College[-train,]
+```
+
+
+b. [8] Perform a logistic regression using the training set. Then use a stepwise approach to generate models with fewer variables. What model do you suggest and why?
+
+```{r}
+logRegPrivate <- glm(Private~., data=College.train, family=binomial())
+summary(logRegPrivate)
+logRegPrivate.step <- step(logRegPrivate, direction="backward")
+summary(logRegPrivate.step)
+
+#I would suggest to use the stepwise redcued modle. Stepwise selection 
+# generatea a model with fewer variables. Furthermore, 
+#predictor variables are added or removed in order to obtain a
+#model with a smaller AIC value.
+#So, by reducing the AIC error we are also choosing a model with lower
+#prediction error. Since this is not eh case for the general model
+#the stepwise model is better
+
+```
+
+
+c. [8] If for a certain institution, the predicted probability is greater than 0.5, classify it as "Yes" (i.e. Private). Using the reduced model in b., obtain predictions for each observation in the validation set.
+
+```{r}
+prob <- predict(logRegPrivate.step, College.validate, type="response")
+logit.pred <- factor(prob > .5, labels=c("No", "Yes"))
+table(logit.pred)
+```
+
+d. [8] Summarize the classification results in a table, showing the true classification vs the classification obtained from the logistic regression model for the validation set. Interpret the results.
+
+```{r}
+logit.perf <- table(College.validate$Private, logit.pred,
+                    dnn=c("Actual", "Predicted"))
+logit.perf
+
+#There are 5 false positives – classified as Yes while in
+#reality they were No
+#There are 5 false negatives – classified as No while in reality
+#they were Yes. 
+```
+
+e. [12] Build a decision tree using the training set. Prune the tree. Then apply the pruned decision tree for the validation set and summarize the classification results in a table.
+
+```{r}
+library(rpart)
+dtree <- rpart(Private ~ ., data=College.train, method="class",
+               parms=list(split="information"))
+summary(dtree)
+dtree$cptable
+dtree.pruned <- prune(dtree, cp=0.02156863)
+dtree.pred <- predict(dtree.pruned, College.validate, type="class")
+dtree.perf <- table(College.validate$Private, dtree.pred,
+                    dnn=c("Actual", "Predicted"))
+dtree.perf
+#There are 11 false positives – classified as Yes while in
+#reality they were No
+#There are 6 false negatives – classified as No while in reality
+#they were Yes. 
+```
+
+f. [6] Build a conditional inference tree using the training set. Apply it to the validation set and summarize the classification results in a table.
+
+```{r fig.width=11, fig.height=10, out.width="100%"}
+library(party)
+fit.ctree <- ctree(Private~., data=College.train)
+plot(fit.ctree, main="Conditional Inference Tree")
+ctree.pred <- predict(fit.ctree, College.validate, type="response")
+ctree.perf <- table(College.validate$Private, ctree.pred,
+dnn=c("Actual", "Predicted"))
+ctree.perf
+#There are 7 false positives – classified as Yes while in
+#reality they were No
+#There are 10 false negatives – classified as No while in reality
+#they were Yes. 
+```
+
+g. [6] Grow a random forest using the training set. Apply it to the validation set and summarize the classification results in a table.
+
+```{r}
+library(randomForest)
+fit.forest <- randomForest(Private~., data=College.train, 
+                           na.action=na.roughfix, 
+                           importance=TRUE)
+summary(fit.forest)
+forest.pred <- predict(fit.forest, College.validate)
+forest.perf <- table(College.validate$Private, forest.pred, 
+                     dnn=c("Actual", "Predicted"))
+forest.perf
+
+```
+
+h. [11] Compute sensitivity, specificity, positive predictive value, negative predictive value, and accuracy of each method using the function `performance()` in Lecture 12. Compare the results for these methods.
+
+```{r}
+performance <- function(table, n=2){
+if(!all(dim(table) == c(2,2)))
+stop("Must be a 2 x 2 table")
+tn = table[1,1]
+fp = table[1,2]
+fn = table[2,1]
+tp = table[2,2]
+sensitivity = tp/(tp+fn)
+specificity = tn/(tn+fp)
+ppp = tp/(tp+fp)
+npp = tn/(tn+fn)
+hitrate = (tp+tn)/(tp+tn+fp+fn)
+result <- paste("Sensitivity = ", round(sensitivity, n) ,
+"\nSpecificity = ", round(specificity, n),
+"\nPositive Predictive Value = ", round(ppp, n),
+"\nNegative Predictive Value = ", round(npp, n),
+"\nAccuracy = ", round(hitrate, n), "\n", sep="")
+cat(result)
+}
+
+performance(logit.perf)
+performance(dtree.perf)
+performance(ctree.perf)
+performance(forest.perf)
+
+#Of these model the logsitic regression and the random forest model
+#have the highest accuracy
+#Furthermore, the logistic regression model has the highest precision
+#The the randomforest model has a higher true positive rate
+```

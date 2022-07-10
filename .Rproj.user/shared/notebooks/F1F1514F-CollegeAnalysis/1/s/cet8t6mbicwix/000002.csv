@@ -1,0 +1,2 @@
+"0","college_df <- college_df[!duplicated(college_df), ]"
+"0","college_df <- college_df[!duplicated(as.list(college_df))]"

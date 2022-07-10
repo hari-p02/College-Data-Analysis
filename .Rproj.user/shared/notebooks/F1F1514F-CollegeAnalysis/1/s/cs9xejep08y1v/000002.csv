@@ -1,0 +1,8 @@
+"0","college_names <- pg %>% html_nodes(""._1RI9D22X"") %>% html_text() #This gets all the college names into a vector"
+"0","Est_price_2020_21_without_aid <- pg %>% html_nodes(""td:nth-child(2)"") %>% html_text()"
+"0","Est_price_with_average_grant <- pg %>% html_nodes(""td:nth-child(3)"") %>% html_text()"
+"0","percent_of_students_who_get_any_grants <- pg %>% html_nodes(""td:nth-child(4)"") %>% html_text()"
+"0","graduation_rate <- pg %>% html_nodes(""td:nth-child(5)"") %>% html_text()"
+"0","average_student_debt <- pg %>% html_nodes(""td:nth-child(6)"") %>% html_text()"
+"0","early_career_earnings <- pg %>% html_nodes(""td:nth-child(7)"") %>% html_text()"
+"0","college_location <- pg %>% html_nodes(""._1OtZ7j1R"") %>% html_text()"

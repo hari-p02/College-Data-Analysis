@@ -1,0 +1,2 @@
+"0","link <- paste(""https://money.com/best-colleges/"")"
+"0","pg <-  read_html(link)"

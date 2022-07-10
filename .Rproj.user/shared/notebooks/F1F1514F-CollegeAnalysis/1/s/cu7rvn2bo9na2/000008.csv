@@ -1,0 +1,7 @@
+"0","vioplot(CT$average_time_to_a_degree, ME$average_time_to_a_degree, MA$average_time_to_a_degree, "
+"0","        NH$average_time_to_a_degree, RI$average_time_to_a_degree, VT$average_time_to_a_degree,"
+"0","        names = c(""CT"", ""ME"", ""MA"", ""NH"", ""RI"", ""VT""),"
+"0","        col=""red"","
+"0","        main = ""Violinplot of Average time to a Degree"","
+"0","        xlab =""State"","
+"0","        ylab = ""Avg. Time"")"

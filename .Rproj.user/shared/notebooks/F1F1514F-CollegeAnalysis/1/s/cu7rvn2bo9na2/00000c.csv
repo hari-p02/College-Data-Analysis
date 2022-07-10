@@ -1,0 +1,7 @@
+"0","vioplot(CT$Median_ACT_Score, ME$Median_ACT_Score, MA$Median_ACT_Score, "
+"0","        NH$Median_ACT_Score, RI$Median_ACT_Score, VT$Median_ACT_Score,"
+"0","        names = c(""CT"", ""ME"", ""MA"", ""NH"", ""RI"", ""VT""),"
+"0","        col=""green"","
+"0","        main = ""Violinplot of Median ACT Score"","
+"0","        xlab =""State"","
+"0","        ylab = ""Median ACT Score"")"

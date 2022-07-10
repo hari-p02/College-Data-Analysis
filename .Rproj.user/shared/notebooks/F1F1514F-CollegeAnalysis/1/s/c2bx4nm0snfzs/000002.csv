@@ -1,0 +1,6 @@
+"0","var <- names(college_df) %in% c(""regular_application"", ""college_names"", ""College_Location_Town"", ""College_Location_States"")"
+"0","set.seed(1000)"
+"0","train <- sample(nrow(college_df), 0.8*nrow(college_df))"
+"0","College.train <- college_df[train,][!var]"
+"0","College.validate <- college_df[-train,][!var]"
+"0",""

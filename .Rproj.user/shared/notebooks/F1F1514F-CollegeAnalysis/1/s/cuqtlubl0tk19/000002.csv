@@ -1,0 +1,3 @@
+"0","write.csv(df,""college_data.csv"", row.names = FALSE)"
+"0","college_df <- df"
+"0","rm(df)"

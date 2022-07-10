@@ -1,0 +1,1 @@
+"0","college_df = subset(college_df, select = -c(early_decision_application))"

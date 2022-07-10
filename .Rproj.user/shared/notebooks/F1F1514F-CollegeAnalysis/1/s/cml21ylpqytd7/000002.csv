@@ -1,0 +1,4 @@
+"0","replace_with_null <- function(data, ind){"
+"0","  temp <- trimws(data[,ind])"
+"0","  return(replace(temp, which(temp == ""NA"" | temp == ""N/A""), NA))"
+"0","}"

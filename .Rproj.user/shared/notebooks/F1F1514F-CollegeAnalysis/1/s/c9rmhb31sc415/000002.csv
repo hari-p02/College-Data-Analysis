@@ -1,0 +1,3 @@
+"0","numintdata <- college_df[,sapply(college_df,is.numeric) | sapply(college_df,is.integer)]"
+"0","categoricaldata <- college_df[,sapply(college_df,is.character)]"
+"0","numintdata.imp <- missForest(numintdata)"

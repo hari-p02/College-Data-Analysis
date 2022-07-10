@@ -1,0 +1,7 @@
+"0","vioplot(CT$Median_SAT_Score, ME$Median_SAT_Score, MA$Median_SAT_Score, "
+"0","        NH$Median_SAT_Score, RI$Median_SAT_Score, VT$Median_SAT_Score,"
+"0","        names = c(""CT"", ""ME"", ""MA"", ""NH"", ""RI"", ""VT""),"
+"0","        col=""blue"","
+"0","        main = ""Violinplot of Median SAT Score"","
+"0","        xlab =""State"","
+"0","        ylab = ""Median SAT Score"")"

@@ -1,0 +1,4 @@
+"0","opar <- par(no.readonly=TRUE)"
+"0","tuk <- glht(aov.fit, linfct=mcp(College_Location_States=""Tukey""))"
+"0","par(mar=c(5,4,6,2))"
+"0","plot(cld(tuk, level=.05), col=""lightgrey"")"

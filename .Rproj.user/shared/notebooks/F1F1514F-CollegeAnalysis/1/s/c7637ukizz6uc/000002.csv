@@ -1,0 +1,1 @@
+"0","college_df$SAT_ACT_required_for_Fall_2021 <- ifelse(college_df$SAT_ACT_required_for_Fall_2021 == ""yes"", 1, 0)"

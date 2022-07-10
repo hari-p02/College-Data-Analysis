@@ -1,0 +1,1 @@
+"0","college_df <- separate(college_df, 5, c(""Median_SAT_Score"", ""Median_ACT_Score""), ""/"", remove=TRUE, convert = TRUE)"

@@ -1,0 +1,624 @@
+---
+title: "STAT 3675Q Homework 6"
+subtitle: "Due date: **Friday, April 15, 2022, 11:59pm**"
+author: "Hari Patchigolla"
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+# Some global options you might use if you like
+knitr::opts_chunk$set(comment = NA) # if you want to remove hashes from all output
+knitr::opts_chunk$set(out.width="80%") # if you want to resize the output figure
+options(width = 80) # to set the max. number of characters to 80
+```
+
+# STAT 3675Q Final Project - Analyzing Correlations between Various Colleges in America
+
+## Introduction
+
+Every year thousands upon thousands of high school seniors from across the country apply to numerous universities with hopes of attending a dream school, or a school with a good program in their field of interest. I too have been in that position before, hence the motivation for this project. Student want to have adequent access to do data to based their decisions off of. 
+
+For this analysis I am Web Scraping data off of [www.money.com](www.money.com). Money is an independent, advertiser-supported website and their editors "research hundreds of sources and contact hundreds of the most respected experts in each industry to get the most relevant information to help others make the right purchasing decision." The data consists of various/useful metrics of the the best colleges in America ranked by value (as determined by the website). In this first section I create the dataframe that consists of all the data I want to collect from the website.
+
+Features of the dataset - 
+
+***est_full_Price_2020_2021*** : The estimated full price for the entire 2020/2021 academic year 
+***est_price_for_students_who_receive_aid*** : The estimated full price for the entire 2020/2021 academic year for students that receive some form of aid
+***average_price_for_low_income_students*** : Avg. Price for Low Income Students
+***acceptance_rate*** : Acceptance rate                            
+***Median_SAT_Score***  : Median SAT Score                           
+***Median_ACT_Score  ***  : Median ACT Score                     
+***enrollment  *** : Number of Students Enrolled                        
+***percent_of_need_met  *** : Percent of Student that have the need met              
+***percent_of_students_who_get_merit_grants *** : Percent of students who get merit aids   
+***average_merit_grant   ***: Avg. Merit Grant                       
+***graduation_rate   ***: Graduation Rate                           
+***average_time_to_a_degree ***: Avg. Time to a Degree                   
+***average_student_debt *** : Avg. Student Debt                       
+***average_salary_within_5_years ***:Avg. Salary within 5 Years               
+***percent_earning_more_than_28000  *** : Percent earning more that $28,000           
+***percent_of_students_who_get_any_grants***: Percent of Students who get any grants      
+***percent_of_students_with_need_who_get_grants ***: Percent of Students with Need who get Grants
+***SAT_ACT_required_for_Fall_2021 ***: SAT/ACT Required               
+***regular_application  *** : Reg Application deadline                       
+***college_names  *** : College Name                            
+***College_Location_Town ***: College Location (Town)                       
+***College_Location_States***: College Location (State) 
+
+
+This dataset contains a large number of variables and rows (each of which represent a different college). Initially my research goal/question was to elucidate statistically significant differences in within the colleges of different regions in USA :
+
+
+![](reg.png){width=100%}
+
+
+
+In other words, my initial goal was to understand if there was a significant difference within certain features of the dataframe for various regions of USA. For example:
+1. Is there a significant difference between the enrollment in top colleges (determined by money.com) between universities in New England region and Far West Region?
+2. Is it harder to get into a college (based off off acceptance rate) in the Southeast region versus the Rocky Mountain Region? 
+3. Do colleges in the Southwest Region have a higher graduation rate than those in the New England region?
+
+However, as I was going about this project, I decided to only study the New England region and any statistically significant differences in the universities within the states of New England.
+
+To study these difference I will be using ANOVA tests and t-tests. Please look at the respective sections to see the research questions. 
+
+Lastly, I will be implementing a logistic regression model that can predict if a university in USA requires the SAT/ACT (more details, such as my motivation for doing this, are in the specified section)
+
+Please continue reading to find answers to my research questions and analysis.
+
+
+## Creating Dataset
+
+The `rvest` library is used for web scraping and the `dplyr` library is used for its pipe lining functionality.
+```{r warning=FALSE, echo = FALSE, results = FALSE} 
+library(rvest)
+library(dplyr)
+```
+
+Here I am using the `read_html()` function in `rvest` to read an html document specified by a url.
+```{r}
+link <- paste("https://money.com/best-colleges/")
+pg <-  read_html(link)
+```
+
+The `html_nodes()` function allows me to get the html tags by specifying a specific CSS selector. And `html_text()` gets the text in an html node. 
+
+The below code shows how the html page `pg` (from the previous code block) is being used to extract certain information like College Name, Graduation Rate, etc. of all the colleges in this [link](https://money.com/best-colleges/). The CSS selectors were chosen using the following [Chrome Extension](https://chrome.google.com/webstore/detail/selectorgadget/mhjhnkcfbdhnjickkkdbjoemdmbfginb?hl=en).
+```{r}
+college_names <- pg %>% html_nodes("._1RI9D22X") %>% html_text() #This gets all the college names into a vector
+Est_price_2020_21_without_aid <- pg %>% html_nodes("td:nth-child(2)") %>% html_text()
+Est_price_with_average_grant <- pg %>% html_nodes("td:nth-child(3)") %>% html_text()
+percent_of_students_who_get_any_grants <- pg %>% html_nodes("td:nth-child(4)") %>% html_text()
+graduation_rate <- pg %>% html_nodes("td:nth-child(5)") %>% html_text()
+average_student_debt <- pg %>% html_nodes("td:nth-child(6)") %>% html_text()
+early_career_earnings <- pg %>% html_nodes("td:nth-child(7)") %>% html_text()
+college_location <- pg %>% html_nodes("._1OtZ7j1R") %>% html_text()
+```
+
+Here I create a dataframe and get all the information form a specific college by extracting the href attribute and going to that link. Money has a page dedicated to information on a specific college here is a [link](https://money.com/best-colleges/profile/massachusetts-institute-of-technology/) to MIT's page on Money. Notice how there are many different features like Enrollment, Acceptance Rate, Est. price for students who receive aid, etc. Also notice how every college from the intial link has a similar page with the same information (here is the link for [Harvard](https://money.com/best-colleges/profile/harvard-university/), for [Univeristy of Florida](https://money.com/best-colleges/profile/university-of-florida/)). All of this information is being extracted and then put into a dataframe.
+```{r}
+df <- data.frame(matrix(ncol = 19, nrow = 0))
+baselink <- "https://money.com"
+
+for (i in 1:748){
+  sel <- paste("tr:nth-child(", i, ") ._1RI9D22X", sep="")
+  restlink <- pg %>% html_nodes(sel) %>% html_attr("href")
+  gotolink <- paste(baselink, restlink, sep="")
+  datapg <- read_html(gotolink)
+  
+  vals <- datapg %>% html_nodes(".small-3") %>% html_text()
+  vals2 <- datapg %>% html_nodes(".small-2") %>% html_text()
+  
+  temp <- append(vals, vals2)
+  df <- rbind(df, temp)
+}
+```
+
+Write the csv file to save it and rename the dataframe to `college_df`.
+```{r}
+write.csv(df,"college_data.csv", row.names = FALSE)
+college_df <- df
+rm(df)
+```
+
+Change the names of the `college_df` to match what they really represent.
+```{r}
+coln <- c("est_full_Price_2020_2021",
+          "est_price_for_students_who_receive_aid",
+          "average_price_for_low_income_students",
+          "acceptance_rate",
+          "median_SAT_ACT_score",
+          "SAT_ACT_required_for_Fall_2021",
+          "enrollment",
+          "percent_of_need_met",
+          "percent_of_students_who_get_merit_grants",
+          "average_merit_grant",
+          "graduation_rate",
+          "average_time_to_a_degree",
+          "average_student_debt",
+          "average_salary_within_5_years",
+          "percent_earning_more_than_28000",
+          "early_decision_application",
+          "regular_application",
+          "percent_of_students_who_get_any_grants",
+          "percent_of_students_with_need_who_get_grants"
+)
+
+names(college_df) <- coln
+```
+
+Add on information from the intial [link](https://money.com/best-colleges/) that was not in any specific college site into `college_df`.
+```{r}
+college_df["Est_price_2020_21_without_aid"] <- Est_price_2020_21_without_aid
+college_df["college_names"] <- college_names
+college_df["Est_price_with_average_grant"] <- Est_price_with_average_grant
+college_df["early_career_earnings"] <- early_career_earnings
+college_df["college_location"] <- college_location
+```
+
+Check the structure of the dataframe. Notice how all the columns of character vectors. This is because the `html_text()` function returns a string.
+
+We now have to preprocess the data to change the type and replace missing values. Also notice how values that should be numeric have a dollar sign and commas or even percent symbols. This all needs to be changed.
+```{r}
+str(college_df)
+```
+
+# Cleaning Dataset
+
+## Changing Types of the Columns
+
+the `tidyr` library is used later to split certain columns in the `college_df`
+```{r results = FALSE}
+library(tidyr)
+```
+
+Missing values in `college_df` are currently represented as "N/A" or "NA" (as characters and not actual NA values) so this function below takes in a dataframe and an column number and replaces all "N/A" and "NA" with an actual NA and returns a new vector.  
+```{r}
+replace_with_null <- function(data, ind){
+  temp <- trimws(data[,ind])
+  return(replace(temp, which(temp == "NA" | temp == "N/A"), NA))
+}
+```
+
+The `cleandfcol` function below is a bit complicated so I will not go into the tiny details of it, but it essentially takes in a dataframe and a column number and and returns the proper format of the column. For example, in the columns that contains values like ["$4,839" ,"$5,674" ...] it will remove the dollar sign and comma and return them as a numeric vector. Or for a column of percents ["7%", "23%", ...] it will remove the "%" and return a numeric vector.
+```{r}
+cleandfcol <- function(data, ind){
+  vec <- replace_with_null(data, ind)
+  nonavec <- vec[!is.na(vec)]
+  if (sum(substr(nonavec, start = 3, stop = 3) == "%") > 0){
+    vec <- gsub("%", "", vec)
+    return(as.numeric(vec))
+  }
+  else if (sum(substr(nonavec, start = 1, stop = 1) == "$") > 0){
+    vec <- sub('.', '', gsub(",", "", vec))
+    return(as.numeric(vec))
+  }
+  else if (sum(grepl(",", data[,ind], fixed = TRUE)) > 0){
+    vec <- gsub(",", "", vec)
+    return(as.numeric(vec))
+  }
+  else {
+    vec <- gsub("years", "", vec)
+    return(as.numeric(vec))
+  }
+}
+
+
+```
+
+
+Here we go through all the columns that need to be formatted (like the enrollment, acceptance_rate, etc.) and properly convert them into a numeric vector and replace `college_df` with the returned vector.
+```{r}
+for (i in c(1, 2, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 15, 18, 19, 20, 22, 23)){
+  college_df[,i] <- cleandfcol(college_df, i)
+}
+```
+
+In the below two code blocks I use the `separate()` function in the `tidyr` library to split the `median_SAT_ACT_score` and `college_location` columns.
+```{r}
+college_df <- separate(college_df, 5, 
+                       c("Median_SAT_Score", "Median_ACT_Score"), "/", 
+                       remove=TRUE, convert = TRUE)
+```
+
+```{r}
+college_df <- separate(college_df, 25, 
+                       c("College_Location_Town", "College_Location_States"), ",", 
+                       remove=TRUE, convert = TRUE)
+college_df$College_Location_States <- trimws(college_df$College_Location_States)
+```
+
+The `replace_with_null` function is used replace "NA" to NA in the remaining columns (such as the categorical or character columns)
+```{r}
+for (i in c(7, 17, 18, 22, 25)){
+  college_df[,i] <- replace_with_null(college_df, i)
+}
+```
+
+Here I remove duplicated rows and columns in `college_df` [Source](https://www.marsja.se/how-to-remove-duplicates-in-r-rows-columns-dplyr/)
+```{r}
+college_df <- college_df[!duplicated(college_df), ]
+college_df <- college_df[!duplicated(as.list(college_df))]
+```
+
+Notice how all the columns are now of the proper type and format.
+```{r}
+str(college_df)
+```
+
+##Exploring and Handling Missing Values
+
+```{r warnings = FALSE, echo = FALSE, results = FALSE}
+library(visdat)
+library(naniar)
+library(missForest)
+```
+
+Currently the `college_df` dataset has 1008 missing values with almost 5.9% of its data missing.
+```{r warning=FALSE}
+vis_miss(college_df)
+gg_miss_var(college_df)
+sum(is.na(college_df))
+```
+Because the `early_decision_application` has more than 50% of its data missing  (more than 400 missing values) it is dropped.
+```{r}
+college_df = subset(college_df, select = -c(early_decision_application))
+```
+
+Data is split into numeric and character datasets (for imputation via the `missForest` [library](https://cran.r-project.org/web/packages/missForest/missForest.pdf)). It uses a random forest trained on the observed values of a data matrix to predict the missing values.
+```{r}
+numintdata <- college_df[,sapply(college_df,is.numeric) | sapply(college_df,is.integer)]
+categoricaldata <- college_df[,sapply(college_df,is.character)]
+numintdata.imp <- missForest(numintdata)
+```
+
+This is the normalized root mean squared error (NRMSE). It is a small value indicated good imputation results.
+```{r}
+numintdata.imp$OOBerror
+```
+In the categorical dataset only the `regular_application` column has missing values. To impute it I will replace it with the mode of the column.
+```{r}
+vis_miss(categoricaldata)
+```
+R does not have a built in function to calculate mode, so I used a function from this [link](https://www.codingprof.com/how-to-replace-nas-with-the-mode-most-frequent-value-in-r/)
+```{r}
+#Source: 
+calc_mode <- function(x){
+  
+  # List the distinct / unique values
+  distinct_values <- unique(x)
+  
+  # Count the occurrence of each distinct value
+  distinct_tabulate <- tabulate(match(x, distinct_values))
+  
+  # Return the value with the highest occurrence
+  distinct_values[which.max(distinct_tabulate)]
+}
+
+mfreq <- calc_mode(categoricaldata$regular_application)
+mfreq #The most frequent regular application deadline is rolling
+```
+The following code cell replaces all NA values in `regular_application` with "rolling"
+```{r}
+categoricaldata$regular_application = if_else(is.na(categoricaldata$regular_application), 
+                                mfreq, 
+                                categoricaldata$regular_application)
+```
+
+Notice how both the numerical and categorical datasets no longer have any missing values
+```{r}
+vis_miss(categoricaldata)
+vis_miss(numintdata.imp$ximp)
+```
+
+```{r}
+college_df <- cbind(numintdata.imp$ximp, categoricaldata)
+```
+
+Now `college_df` no longer contains missing values. 
+```{r}
+vis_miss(college_df)
+```
+
+# Data Visulaization
+
+For the sake of this project as there are many variables to see/understand I will only be focusing on a subset of the dataframe that contians information of the universities within the New England region. 
+```{r warnings = FALSE, echo = FALSE, results = FALSE}  
+library(psych)
+library(vioplot)
+library(multcomp)
+library(car)
+```
+
+Though there is a lot of information below some notable ones are:
+1. The trimmed means and means do not seem to change much for each variable suggesting that there are little outliers. 
+2. The small kurtosis values also suggests lack of outliers.
+3. Many of the columns have both a positive or negative skew.
+```{r}
+psych::describe(college_df)
+```
+
+
+Here we split the `college_df` dataframe to into separate dataframes for all six states in the New England Region (Connecticut, Maine, Massachusetts, New Hampshire, Rhode Island, and Vermont). I have also created a `new_england` dataframe that consists of all the data in all six New England states.
+```{r}
+CT <- college_df[which(college_df$College_Location_States == "CT"),]
+#summary(CT)
+ME <- college_df[which(college_df$College_Location_States == "ME"),]
+#summary(ME)
+MA <- college_df[which(college_df$College_Location_States == "MA"),]
+#summary(MA)
+NH <- college_df[which(college_df$College_Location_States == "NH"),]
+#summary(NH)
+RI <- college_df[which(college_df$College_Location_States == "RI"),]
+#summary(RI)
+VT <- college_df[which(college_df$College_Location_States == "VT"),]
+#summary(VT)
+new_england <- college_df[which(college_df$College_Location_States %in% c("CT", 
+                                                                     "MA",
+                                                                     "ME",
+                                                                     "NH",
+                                                                     "RI",
+                                                                     "VT")),]
+summary(new_england)
+```
+The following side-by-side boxplot shows that top universites in CT, MA, RI, and VT have a similar median price whereas ME and MH have a lower median full price. Furthermore, universities in VT show the greatest spread. Lastly, there is an outlier the RI, while none of the other states have any outliers.
+```{r fig.width=15, fig.height=10, out.width="100%"}
+boxplot(CT$est_full_Price_2020_2021,
+        ME$est_full_Price_2020_2021,
+        MA$est_full_Price_2020_2021,
+        NH$est_full_Price_2020_2021,
+        RI$est_full_Price_2020_2021,
+        VT$est_full_Price_2020_2021,
+        col=c("gold", "darkgreen", "red", "blue","purple", "pink"),
+        main="Distribution of Estimated Full Price for the 2020 - 2021 academic year Amongst Univeristies in New England",
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        xlab="State", 
+        ylab="Price ($)")
+```
+There does not seem to be too much of a difference between the universities of the New England states on requiring the SAT or ACT. In fact, in NH and VT none of the top universities require the SAT or ACT.
+```{r echo=TRUE}
+(tab <- table(new_england$SAT_ACT_required_for_Fall_2021, 
+              new_england$College_Location_States))
+barplot(tab,
+        main="Stacked Bar Plot of SAT or ACT required for Fall 2021",
+        xlab="State", 
+        ylab="Frequency",
+        col=c("red", "yellow"),
+        legend=rownames(tab))
+```
+The pair plot below shows a lot of information. More specifically in shows that there is a significant positive correlation between `acceptance_rate` and `average_student_debt` (0.74), `percent_of_students_who_get_merit_grants` and `average_price_for_low_income_students` (0.75). Furthermore the distribution of `acceptance_rate` and `est_full_Price_2020_2021` seems to be bi-modal.
+```{r fig.width=11, fig.height=10, out.width="100%"}
+pairs.panels(new_england[c("acceptance_rate", 
+                    "est_price_for_students_who_receive_aid", 
+                    "est_full_Price_2020_2021", 
+                    "percent_of_need_met",
+                    "average_merit_grant",
+                    "average_student_debt",
+                    "average_price_for_low_income_students",
+                    "percent_of_students_who_get_merit_grants",
+                    "average_salary_within_5_years")],
+             lm = TRUE)
+```
+Interpretation of the Violin Plot:
+1. There is a large positive skew among all the New England States for enrollment in their colleges. Also the enrollment in the colleges are centered around the median. 
+2. The Median SAT score seems to be positively skewed for NH while more of the data is centered around the median for VT. 
+3. All the states in New England have a large negative skew for average student debt (perhaps because a small portion of students get a lot of scholarship money)
+4. There is a large positive skew is the average time to a degree for all states
+5. The Average Price For Low Income Students seems to be symmetric in VT but positively skewed in MA and NH.
+6. ME has a lower median ACT score compared to other universities from other states.
+
+Note: There is a lot of information in this figure, above is just a few significant observations. 
+
+```{r echo = TRUE}
+opar <- par(no.readonly=TRUE)
+par(mfrow=c(2,3))
+vioplot(CT$enrollment, ME$enrollment, MA$enrollment, 
+        NH$enrollment, RI$enrollment, VT$enrollment,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="gold",
+        main = "Violinplot of Enrollment",
+        xlab ="State",
+        ylab = "Enrollment")
+vioplot(CT$Median_SAT_Score, ME$Median_SAT_Score, MA$Median_SAT_Score, 
+        NH$Median_SAT_Score, RI$Median_SAT_Score, VT$Median_SAT_Score,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="blue",
+        main = "Violinplot of Median SAT Score",
+        xlab ="State",
+        ylab = "Median SAT Score")
+vioplot(CT$average_student_debt, ME$average_student_debt, MA$average_student_debt, 
+        NH$average_student_debt, RI$average_student_debt, VT$average_student_debt,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="orange",
+        main = "Violinplot of Average Student Debt",
+        xlab ="State",
+        ylab = "Avg. Debt")
+vioplot(CT$average_time_to_a_degree, ME$average_time_to_a_degree, MA$average_time_to_a_degree, 
+        NH$average_time_to_a_degree, RI$average_time_to_a_degree, VT$average_time_to_a_degree,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="red",
+        main = "Violinplot of Average time to a Degree",
+        xlab ="State",
+        ylab = "Avg. Time")
+vioplot(CT$average_price_for_low_income_students, ME$average_price_for_low_income_students, 
+        MA$average_price_for_low_income_students, NH$average_price_for_low_income_students, 
+        RI$average_price_for_low_income_students, VT$average_price_for_low_income_students,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="pink",
+        main = "Violinplot of Average Price For Low Income Students",
+        xlab ="State",
+        ylab = "Avg. Price")
+vioplot(CT$Median_ACT_Score, ME$Median_ACT_Score, MA$Median_ACT_Score, 
+        NH$Median_ACT_Score, RI$Median_ACT_Score, VT$Median_ACT_Score,
+        names = c("CT", "ME", "MA", "NH", "RI", "VT"),
+        col="green",
+        main = "Violinplot of Median ACT Score",
+        xlab ="State",
+        ylab = "Median ACT Score")
+par(opar)
+
+```
+In the following tests, a One-way ANOVA test was used. This is because a One-way Anova test allows to test/compare the means of 2 or more groups which is the purpose of the following questions. 
+
+#### Question: Is there a different between the median SAT and median ACT scores between each of the 6 states in New England in the dataset?
+
+The first test, the null hypothesis is that average Median SAT score for each state in New England is equal and the alt hyp. is that at least two states do not have the same average Median SAT score. the p-value (0.907) is very large indicating that we fail to reject the null hyp. and conclude that there is not significant difference in the average Median SAT score amongst the states of New England at the 0.05 significance level.
+
+The second test, the null hypothesis is that average Median ACT score for each state in New England is equal and the alt hyp. is that at least two states do not have the same average Median ACT score. the p-value (0.832) is very large indicating that we fail to reject the null hyp. and conclude that there is not significant difference in the average Median ACT score amongst the states of New England at the 0.05 significance level.
+```{r}
+aov.fit1 <- aov(Median_SAT_Score ~ College_Location_States, data = new_england)
+summary(aov.fit1)
+aov.fit1 <- aov(Median_ACT_Score ~ College_Location_States, data = new_england)
+summary(aov.fit1)
+```
+
+#### Question: Is there a different between the median graduation rate between each of the 6 states in New England in the dataset?
+
+The null hyp. for this test is that there is no significant difference between the mean graduation rate among CT, ME, MA, NH, RI, and VT. And the alt hyp. is that there is a significant difference among at least 2 of the states. The p-value (0.865) shows that we fail to reject the null hypothesis and that there is no significant difference between the graduation rates of CT, ME, MA, NH, RI, and VT at the 0.05 significance level.
+```{r}
+aov.fit2 <- aov(graduation_rate ~ College_Location_States, data = new_england)
+summary(aov.fit2)
+```
+
+#### Question: Is there a different between the acceptence rate between each of the 6 states in New England in the dataset?
+
+The null hyp. for this test is that there is no significant difference between the mean acceptance rate among CT, ME, MA, NH, RI, and VT. And the alt hyp. is that there is a significant difference among at least 2 of the states. The p-value (0.89) shows that we fail to reject the null hypothesis and that there is no significant difference between the acceptance rates of CT, ME, MA, NH, RI, and VT at the 0.05 significance level.
+```{r}
+aov.fit3 <- aov(acceptance_rate ~ College_Location_States, data = new_england)
+summary(aov.fit3)
+```
+
+#### Question: Is there a different between the enrollment between each of the 6 states in New England in the dataset?
+
+The null hyp. for this test is that there is no significant difference between the mean enrollment among CT, ME, MA, NH, RI, and VT. And the alt hyp. is that there is a significant difference among at least 2 of the states. The p-value (0.0135) shows that we reject the null hypothesis and that there is significant difference between at least 2 of the states in enrollment at the 0.05 significance level.
+```{r}
+new_england$College_Location_States <- factor(new_england$College_Location_States)
+aov.fit <- aov(enrollment ~ College_Location_States, data = new_england)
+summary(aov.fit)
+```
+To understand which states differ from each other for enrollment we use the `TukeyHSD()` function. The mean enrollment for MA and CT or VT and RI are not significantly different. But the Mean enrollment between NH and CT, NH and MH, and VT and NH are significantly different at the 0.05 significance level. 
+```{r}
+(Tfit <- TukeyHSD(aov.fit))
+```
+The following a visualization of the pariwise comparisons from above.  Groups that have the same label don’t have significantly different mean enrollment. 
+```{r}
+opar <- par(no.readonly=TRUE)
+tuk <- glht(aov.fit, linfct=mcp(College_Location_States="Tukey"))
+par(mar=c(5,4,6,2))
+plot(cld(tuk, level=.05), col="lightgrey")
+par(opar)
+```
+Because the ANOVA test shows shows some significance, lets see if the assumptions of ANOVA uphold. ANOVA requires that in each group the response is normally distributed, with equal variances.
+
+Below, the normality assumption is violated because the point deviate significantly from the liear line. 
+
+```{r}
+fit.lm <- lm(enrollment ~ College_Location_States, data = new_england)
+qqPlot(fit.lm$residuals, main="Q-Q Plot")
+```
+The null hyp for the bartlett test is that the variances are equal, but the low p-value leads us to reject the null hyp. at the 0.05 significance level and accept the alt hyp. that the variances are not equal.
+```{r}
+bartlett.test(enrollment ~ College_Location_States, data = new_england)
+```
+From the output, you can see that, after adjusting for multiple testing (Bonferonni), there’s an indication of outliers in the data. 
+```{r}
+outlierTest(aov.fit)
+```
+
+The one way ANOVA results are not to be used as none of the assumptions are valid.
+
+I will now fit a logistic regression model to predict if the Sat or ACT in required on the ***entire*** `college_df` dataset. 
+
+My motivation behind this is because MANY colleges are starting to no longer require the SAT or ACT, and will not consider them as a part of your application even if you send them. As a result having a model that can predict if a college requires SAT or not will be useful.
+```{r}
+college_df$SAT_ACT_required_for_Fall_2021 <- ifelse(college_df$SAT_ACT_required_for_Fall_2021 == "yes", 1, 0)
+```
+
+Split the data into a train and test dataset (with out the categorical variables)
+```{r}
+var <- names(college_df) %in% c("regular_application", 
+                                "college_names", 
+                                "College_Location_Town", 
+                                "College_Location_States")
+set.seed(1000)
+train <- sample(nrow(college_df), 0.8*nrow(college_df))
+College.train <- college_df[train,][!var]
+College.validate <- college_df[-train,][!var]
+
+```
+
+6 of the predictors are significant at the 0.05 level. However there is only a small drop in Null deviance indicating that this logistic regression model is not the best. 
+```{r}
+log_model <- glm(SAT_ACT_required_for_Fall_2021 ~ ., family = binomial(), College.train)
+summary(log_model)
+
+```
+There are 5 false positive and 19 false negatives for the above model.
+```{r}
+prob <- predict(log_model, College.validate, type="response")
+logit.pred <- factor(prob > .5, labels=c("No", "Yes"))
+table(logit.pred)
+logit.perf <- table(College.validate$SAT_ACT_required_for_Fall_2021, logit.pred,
+                    dnn=c("Actual", "Predicted"))
+logit.perf
+```
+Here I use a step wise selection to generate a model with fewer variables. Predictor variables are added or removed in order to obtain a model with a smaller AIC value. Notice how the AIC value is 449.48 whereas the previous model has an AIC value of 467.8, shows that the step wise model is a better fit.
+```{r}
+logRegPrivate.step <- step(log_model, direction="backward")
+summary(logRegPrivate.step)
+```
+The step wise model shows that est_full_Price_2020_2021, average_price_for_low_income_students, Median_SAT_Score, enrollment, percent_of_students_who_get_merit_grants, and percent_of_need_met are all good predictors. 
+
+The step wise model has 4 false positives and 20 false negatives. This is better than the previous model
+```{r}
+prob <- predict(logRegPrivate.step, College.validate, type="response")
+logit.pred <- factor(prob > .5, labels=c("No", "Yes"))
+table(logit.pred)
+logit.perf2 <- table(College.validate$SAT_ACT_required_for_Fall_2021, logit.pred,
+                    dnn=c("Actual", "Predicted"))
+logit.perf2
+```
+The performance shows that the two models do that not really differ by much. The step wise model has a lower sensitivity and while  has a higher specificity (true negative rate). The regular model also has a higher negative predictive rate.
+```{r}
+performance <- function(table, n=2){
+  if(!all(dim(table) == c(2,2)))
+  stop("Must be a 2 x 2 table")
+  tn = table[1,1]
+  fp = table[1,2]
+  fn = table[2,1]
+  tp = table[2,2]
+  sensitivity = tp/(tp+fn)
+  specificity = tn/(tn+fp)
+  ppp = tp/(tp+fp)
+  npp = tn/(tn+fn)
+  hitrate = (tp+tn)/(tp+tn+fp+fn)
+  result <- paste("Sensitivity = ", round(sensitivity, n) ,
+  "\nSpecificity = ", round(specificity, n),
+  "\nPositive Predictive Value = ", round(ppp, n),
+  "\nNegative Predictive Value = ", round(npp, n),
+  "\nAccuracy = ", round(hitrate, n), "\n", sep="")
+  cat(result)
+}
+
+performance(logit.perf)
+performance(logit.perf2)
+```
+In  conclusion. I have shown in the One way ANVOA test shows that there is a significant difference in enrollment among the universities of New England but the the assumptions were not valid. Also, there is no significant difference between median SAT and ACT scores and graduation rate and acceptance rate. The graphs in this pdf show that the distribution of full price is roughly the same for all the states with outliers in RI. Ad the violin plots show positive skewing for enrollment and avg time to a degree while there is a negative skew for avg student debt. 
+
+A future step for me would be to analyse other regions of USA the same way I did for New England and then compare different regions within the data set. By doing this I will have a more holistic idea of how this data is.
+
+I encountered many problems. For example when webscraping the data, because there was a lot, it would take a long time to run. But I was able to overcome this by looking through documentation and make sure sure I used proper functions. 
+
+Sources:
+
+https://www.dataquest.io/blog/web-scraping-in-r-rvest/
+https://cran.r-project.org/web/packages/missForest/missForest.pdf
+https://cran.r-project.org/web/packages/rvest/rvest.pdf
+https://www.marsja.se/how-to-remove-duplicates-in-r-rows-columns-dplyr/
+https://chrome.google.com/webstore/detail/selectorgadget/mhjhnkcfbdhnjickkkdbjoemdmbfginb?hl=en
+https://money.com/best-colleges/
+
+
+

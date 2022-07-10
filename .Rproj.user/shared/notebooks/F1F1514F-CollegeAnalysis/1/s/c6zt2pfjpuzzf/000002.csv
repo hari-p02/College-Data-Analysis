@@ -1,0 +1,3 @@
+"0","categoricaldata$regular_application = if_else(is.na(categoricaldata$regular_application), "
+"0","                                mfreq, "
+"0","                                categoricaldata$regular_application)"

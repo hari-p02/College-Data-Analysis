@@ -1,0 +1,8 @@
+"0","vioplot(CT$average_price_for_low_income_students, ME$average_price_for_low_income_students, "
+"0","        MA$average_price_for_low_income_students, NH$average_price_for_low_income_students, "
+"0","        RI$average_price_for_low_income_students, VT$average_price_for_low_income_students,"
+"0","        names = c(""CT"", ""ME"", ""MA"", ""NH"", ""RI"", ""VT""),"
+"0","        col=""pink"","
+"0","        main = ""Violinplot of Average Price For Low Income Students"","
+"0","        xlab =""State"","
+"0","        ylab = ""Avg. Price"")"

@@ -1,0 +1,5 @@
+"0","college_df[""Est_price_2020_21_without_aid""] <- Est_price_2020_21_without_aid"
+"0","college_df[""college_names""] <- college_names"
+"0","college_df[""Est_price_with_average_grant""] <- Est_price_with_average_grant"
+"0","college_df[""early_career_earnings""] <- early_career_earnings"
+"0","college_df[""college_location""] <- college_location"
